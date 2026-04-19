@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>pupupu</title>
+
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+      overflow: hidden;
+    }
+
+    #square {
+      width: 50px;
+      height: 50px;
+      position: absolute;
+      transform: translate(-50%, -50%);
+    }
+
+    #square img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .heart {
+      width: 50px;
+      height: 50px;
+      position: absolute;
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="square">
+  <img id="playerImg" src="image/saddog.jpg">
+</div>
+
+<audio id="bgMusic"></audio>
+
+<script>
+  const square = document.getElementById("square");
+  const playerImg = document.getElementById("playerImg");
+  const music = document.getElementById("bgMusic");
+
+  let x = window.innerWidth / 2;
+  let y = window.innerHeight / 2;
+
+  const speed = 20;
+  const size = 50;
+
+  const normalImg = "image/saddog.jpg";
+  const hitImg = "image/happydog.jpg";
+
+  //МУЗИКА
+  const playlist = [
+    "music/song1.mp3",
+    "music/song2.mp3",
+    "music/song3.mp3",
+    "music/song4.mp3"
+  ];
+
+  let currentTrack = 0;
+
+  function playMusic() {
+    music.src = playlist[currentTrack];
+    music.play();
+  }
+
+  music.addEventListener("ended", () => {
+    currentTrack++;
+    if (currentTrack >= playlist.length) {
+      currentTrack = 0;
+    }
+    playMusic();
+  });
+
+  document.addEventListener("click", () => {
+    if (music.paused) {
+      music.volume = 0.3;
+      playMusic();
+    }
+  });
+
+  //РУХ
+  document.addEventListener("keydown", function(event) {
+    switch(event.key.toLowerCase()) {
+      case "arrowup":
+      case "w":
+        if (y > 0) y -= speed;
+        break;
+
+      case "arrowdown":
+      case "s":
+        if (y < window.innerHeight - size) y += speed;
+        break;
+
+      case "arrowleft":
+      case "a":
+        if (x > 0) x -= speed;
+        break;
+
+      case "arrowright":
+      case "d":
+        if (x < window.innerWidth - size) x += speed;
+        break;
+    }
+
+    square.style.left = x + "px";
+    square.style.top = y + "px";
+
+    checkCollision();
+  });
+
+  //СПАВН СЕРДЕЦЬ
+  function spawnHeart() {
+    const heart = document.createElement("img");
+    heart.src = "image/heart.png";
+    heart.classList.add("heart");
+
+    const hx = Math.random() * (window.innerWidth - 50);
+    const hy = Math.random() * (window.innerHeight - 50);
+
+    heart.style.left = hx + "px";
+    heart.style.top = hy + "px";
+
+    document.body.appendChild(heart);
+  }
+
+  setInterval(spawnHeart, 3500);
+
+  //КОЛІЗІЯ
+  function checkCollision() {
+    const hearts = document.querySelectorAll(".heart");
+
+    hearts.forEach(heart => {
+      const hx = heart.offsetLeft;
+      const hy = heart.offsetTop;
+
+      if (
+        x < hx + 50 &&
+        x + 50 > hx &&
+        y < hy + 50 &&
+        y + 50 > hy
+      ) {
+        playerImg.src = hitImg;
+
+        setTimeout(() => {
+          playerImg.src = normalImg;
+        }, 1000);
+
+        heart.remove();
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
