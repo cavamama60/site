@@ -84,9 +84,10 @@ square.style.top = y + "px";
 
 document.addEventListener("click", () => {
   if (music.paused) {
+     music.volume = 0.3;
     playMusic();
-  }
-});
+  }, { once: true }
+                        );
   
 
   //РУХ
