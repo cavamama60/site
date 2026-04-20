@@ -75,7 +75,6 @@ const playerImg = document.getElementById("playerImg");
 const music = document.getElementById("bgMusic");
 const storyElement = document.getElementById("storyText");
 const scoreElement = document.getElementById("scoreCounter");
-const hy = Math.random() * (window.innerHeight - 60);
 
 const speed = 20;
 const size = 50;
@@ -89,7 +88,6 @@ square.style.top = y + "px";
 const normalImg = "saddog.PNG";
 const hitImg = "happydog.PNG";
 
-
 // =======================
 // ЛІЧИЛЬНИК
 // =======================
@@ -98,19 +96,20 @@ let score = 0;
 function updateScore() {
   scoreElement.textContent = score;
 }
-
 updateScore();
 
-
 // =======================
-// ТЕКСТ / СЮЖЕТ
+// СТАН
 // =======================
 let isTyping = false;
-let stage = 0;
-
+let lastSometimes = 0;
+let lastOverload = 0;
 let isFrozen = false;
 let drainInterval = null;
 
+// =======================
+// ТЕКСТ
+// =======================
 function typeText(text, speed = 40) {
   return new Promise(resolve => {
     storyElement.textContent = "";
@@ -127,7 +126,6 @@ function typeText(text, speed = 40) {
         resolve();
       }
     }
-
     typing();
   });
 }
@@ -145,64 +143,100 @@ function eraseText(speed = 20) {
         resolve();
       }
     }
-
     erasing();
   });
 }
 
-async function updateStory() {
-  if (isTyping) return;
-
-  if (score >= 20 && stage < 1) {
-    stage = 1;
-    await eraseText();
-    await typeText("Sometimes love is too much...");
-  }
-
- if (score >= 30 && stage < 2) {
-  stage = 2;
-  await eraseText();
-  await typeText("Oh...it seems he flopped down from exhaustion, be careful");
-   triggerOverloadPhase();
-  }
-
-}
+// =======================
+// СТАРТ ГРИ
+// =======================
 
 async function startStory() {
   await typeText(
     "Look at this poor puppy... without love he gets angry. Help make him happy, but don't overdo it."
   );
 }
-
 startStory();
 
+// =======================
+// ФАЗИ
+// =======================
+function collectObject() {
+  score++;
+  updateScore();
+  updateStory();
+
+}
+
+async function updateStory() {
+  if (isTyping || isFrozen) return;
+
+ if (score >= 100) return;
+
+  // КОЖНІ 20 ОЧОК → SOMETIMES
+  if (score >= lastSometimes + 20) {
+    lastSometimes += 20;
+
+    await eraseText();
+    await typeText("Sometimes love is too much...");
+  }
+
+  // КОЖНІ 30 ОЧОК → ПЕРЕГРУЗКА
+  if (score >= lastOverload + 30) {
+    lastOverload += 30;
+
+    runPhase2();
+  }
+}
+
+async function runPhase2() {
+  await flashEffect();
+
+  // паралельно
+  showPhaseText();
+  triggerOverloadPhase();
+}
 
 // =======================
-// ЗБІР ОБʼЄКТІВ
+// ЕФЕКТИ
 // =======================
-async function triggerOverloadPhase() {
+function flashEffect() {
+  return new Promise(resolve => {
+    const flash = document.createElement("div");
+    flash.style.position = "fixed";
+    flash.style.top = 0;
+    flash.style.left = 0;
+    flash.style.width = "100%";
+    flash.style.height = "100%";
+    flash.style.background = "white";
+    flash.style.zIndex = "9999";
+
+    document.body.appendChild(flash);
+
+    setTimeout(() => {
+      flash.remove();
+      resolve();
+    }, 300);
+  });
+}
+
+async function showPhaseText() {
+    await eraseText();
+
+    await typeText("Oh... it seems he flopped down from exhaustion, be careful");
+
+    // чекаємо 20 секунд
+    await new Promise(resolve => setTimeout(resolve, 20000));
+
+    // стираємо текст
+    await eraseText();
+}
+
+function triggerOverloadPhase() {
   isFrozen = true;
 
-  // спалах
-  const flash = document.createElement("div");
-  flash.style.position = "fixed";
-  flash.style.top = 0;
-  flash.style.left = 0;
-  flash.style.width = "100%";
-  flash.style.height = "100%";
-  flash.style.background = "white";
-  flash.style.opacity = "1";
-  flash.style.zIndex = "9999";
-  document.body.appendChild(flash);
-
-  setTimeout(() => {
-    flash.remove();
-  }, 300);
-
-  // зміна картинки
   playerImg.src = "tireddog.PNG";
 
-  // зменшення очок
   drainInterval = setInterval(() => {
     if (score > 0) {
       score--;
@@ -210,7 +244,6 @@ async function triggerOverloadPhase() {
     }
   }, 2000);
 
-  // повернення через 13 сек
   setTimeout(() => {
     clearInterval(drainInterval);
     playerImg.src = normalImg;
@@ -218,36 +251,25 @@ async function triggerOverloadPhase() {
   }, 13000);
 }
 
-function collectObject() {
-  score++;
-  updateScore();
-  updateStory();
-}
-
-
 // =======================
 // РУХ
 // =======================
 document.addEventListener("keydown", function(event) {
-
-if (isFrozen) return;
+  if (isFrozen) return;
 
   switch(event.key.toLowerCase()) {
     case "arrowup":
     case "w":
       if (y > 0) y -= speed;
       break;
-
     case "arrowdown":
     case "s":
       if (y < window.innerHeight - size) y += speed;
       break;
-
     case "arrowleft":
     case "a":
       if (x > 0) x -= speed;
       break;
-
     case "arrowright":
     case "d":
       if (x < window.innerWidth - size) x += speed;
@@ -260,9 +282,8 @@ if (isFrozen) return;
   checkCollision();
 });
 
-
 // =======================
-// СПАВН СЕРДЕЦЬ
+// СЕРЦЯ
 // =======================
 function spawnHeart() {
   const heart = document.createElement("img");
@@ -277,9 +298,7 @@ function spawnHeart() {
 
   document.body.appendChild(heart);
 }
-
 setInterval(spawnHeart, 3500);
-
 
 // =======================
 // КОЛІЗІЯ
@@ -297,18 +316,21 @@ function checkCollision() {
       y < hy + 50 &&
       y + 50 > hy
     ) {
-      playerImg.src = hitImg;
+      if (!isFrozen) {
+  playerImg.src = hitImg;
 
-      setTimeout(() => {
-        playerImg.src = normalImg;
-      }, 1000);
+  setTimeout(() => {
+    if (!isFrozen) {
+      playerImg.src = normalImg;
+    }
+  }, 1000);
+}
 
       heart.remove();
       collectObject();
     }
   });
 }
-
 
 // =======================
 // МУЗИКА
