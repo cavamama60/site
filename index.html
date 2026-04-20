@@ -153,17 +153,18 @@ function eraseText(speed = 20) {
 async function updateStory() {
   if (isTyping) return;
 
-  if (score >= 30 && stage < 1) {
+  if (score >= 20 && stage < 1) {
     stage = 1;
     await eraseText();
     await typeText("Sometimes love is too much...");
   }
 
- if (score >= 50 && stage < 2) {
+ if (score >= 30 && stage < 2) {
   stage = 2;
+   triggerOverloadPhase();
   await eraseText();
   await typeText("Oh...it seems he flopped down from exhaustion, be careful");
-  triggerOverloadPhase();
+  
 }
 
 }
