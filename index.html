@@ -161,11 +161,10 @@ async function updateStory() {
 
  if (score >= 30 && stage < 2) {
   stage = 2;
-   triggerOverloadPhase();
   await eraseText();
   await typeText("Oh...it seems he flopped down from exhaustion, be careful");
-  
-}
+   triggerOverloadPhase();
+  }
 
 }
 
