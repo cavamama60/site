@@ -11,6 +11,25 @@ body {
   overflow: hidden;
 }
 
+#progressBox {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  width: 250px;
+  height: 20px;
+  background: #333;
+  border: 2px solid white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+#progressBar {
+  width: 0%;
+  height: 100%;
+  background: rgb(250, 175, 187);
+  transition: 0.3s;
+}
+
 #square {
   width: 50px;
   height: 50px;
@@ -59,7 +78,9 @@ body {
 </head>
 
 <body>
-
+<div id = "progressBox">
+  <div id = "progressBar"></div>
+</div>
 <div id="square">
   <img id="playerImg" src="saddog.PNG">
 </div>
@@ -75,12 +96,22 @@ const playerImg = document.getElementById("playerImg");
 const music = document.getElementById("bgMusic");
 const storyElement = document.getElementById("storyText");
 const scoreElement = document.getElementById("scoreCounter");
+const progressBar = document.getElementById("progressBar");
 
-const speed = 20;
+const speed = 1;
 const size = 50;
+const minY = 150; // мінімальна висота для руху
+const maxScore = 30; // кількість очок для переходу у сон
+const time_heart = 100; // час появи серця в мілісекундах
+const drainIntervalTime = 2000; // час, через який очки зменшуються під час перевантаження
+const time_sleep = 13000; // час сну в мілісекундах
+const dell_time_progress = time_sleep / maxScore; // час, через який прогрес зменшується під час перевантаження
+
 
 let x = (window.innerWidth - size) / 2;
 let y = (window.innerHeight - size) / 2;
+let meaning_progress = 0; // лічильник прогресу
+
 
 square.style.left = x + "px";
 square.style.top = y + "px";
@@ -92,6 +123,7 @@ const hitImg = "happydog.PNG";
 // ЛІЧИЛЬНИК
 // =======================
 let score = 0;
+let hearts_list = []; // масив для збереження сердець на екрані
 
 function updateScore() {
   scoreElement.textContent = score;
@@ -105,7 +137,8 @@ let isTyping = false;
 let lastSometimes = 0;
 let lastOverload = 0;
 let isFrozen = false;
-let drainInterval = null;
+let scoreDrainInterval = null;
+let progressDrainInterval = null;
 
 // =======================
 // ТЕКСТ
@@ -128,6 +161,10 @@ function typeText(text, speed = 40) {
     }
     typing();
   });
+}
+function updateProgressBar() {
+  let progress = Math.min((meaning_progress / maxScore) * 100, 100);
+  progressBar.style.width = progress + "%";
 }
 
 function eraseText(speed = 20) {
@@ -162,8 +199,10 @@ startStory();
 // ФАЗИ
 // =======================
 function collectObject() {
+  meaning_progress++;
   score++;
   updateScore();
+  updateProgressBar();
   updateStory();
 
 }
@@ -171,7 +210,7 @@ function collectObject() {
 async function updateStory() {
   if (isTyping || isFrozen) return;
 
- if (score >= 100) return;
+  if (score >= 100) return;
 
   // КОЖНІ 20 ОЧОК → SOMETIMES
   if (score >= lastSometimes + 20) {
@@ -182,19 +221,23 @@ async function updateStory() {
   }
 
   // КОЖНІ 30 ОЧОК → ПЕРЕГРУЗКА
-  if (score >= lastOverload + 30) {
-    lastOverload += 30;
+  if (meaning_progress >= lastOverload + maxScore) { // scorre >= lastOverload + maxScore
+    lastOverload += maxScore;
 
     runPhase2();
+
   }
 }
 
 async function runPhase2() {
   await flashEffect();
 
+
   // паралельно
   showPhaseText();
   triggerOverloadPhase();
+  clearProgressBar();
+ 
 }
 
 // =======================
@@ -220,13 +263,15 @@ function flashEffect() {
   });
 }
 
+
+
 async function showPhaseText() {
     await eraseText();
 
     await typeText("Oh... it seems he flopped down from exhaustion, be careful");
 
     // чекаємо 20 секунд
-    await new Promise(resolve => setTimeout(resolve, 20000));
+    await new Promise(resolve => setTimeout(resolve, 10000));
 
     // стираємо текст
     await eraseText();
@@ -237,68 +282,90 @@ function triggerOverloadPhase() {
 
   playerImg.src = "tireddog.PNG";
 
-  drainInterval = setInterval(() => {
+  scoreDrainInterval = setInterval(() => {
     if (score > 0) {
       score--;
       updateScore();
     }
-  }, 2000);
+  }, drainIntervalTime);
 
   setTimeout(() => {
-    clearInterval(drainInterval);
+    clearInterval(scoreDrainInterval);
     playerImg.src = normalImg;
     isFrozen = false;
-  }, 13000);
+  }, time_sleep);
+}
+
+function clearProgressBar() {
+
+  progressDrainInterval = setInterval(() => {
+    if (meaning_progress > 0) {
+      meaning_progress--;
+      updateProgressBar();
+    }
+  }, dell_time_progress);
+
 }
 
 // =======================
 // РУХ
 // =======================
-document.addEventListener("keydown", function(event) {
+const keys = {};
+
+document.addEventListener("keydown", (e) => {
+  keys[e.key.toLowerCase()] = true;
+});
+
+document.addEventListener("keyup", (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+setInterval(move, 4);
+
+function move() {
   if (isFrozen) return;
 
-  switch(event.key.toLowerCase()) {
-    case "arrowup":
-    case "w":
-      if (y > 0) y -= speed;
-      break;
-    case "arrowdown":
-    case "s":
-      if (y < window.innerHeight - size) y += speed;
-      break;
-    case "arrowleft":
-    case "a":
-      if (x > 0) x -= speed;
-      break;
-    case "arrowright":
-    case "d":
-      if (x < window.innerWidth - size) x += speed;
-      break;
+  if (keys["w"] || keys["arrowup"]) {
+    y -= speed;
   }
+  if (keys["s"] || keys["arrowdown"]) {
+    y += speed;
+  }
+  if (keys["a"] || keys["arrowleft"]) {
+    x -= speed;
+  }
+  if (keys["d"] || keys["arrowright"]) {
+    x += speed;
+  }
+
+  x = Math.max(13, Math.min(x, window.innerWidth - size));
+  y = Math.max(minY, Math.min(y, window.innerHeight - (size)));
 
   square.style.left = x + "px";
   square.style.top = y + "px";
 
   checkCollision();
-});
+}
 
 // =======================
 // СЕРЦЯ
 // =======================
 function spawnHeart() {
+  if (hearts_list.length >= 10) return; // обмеження на кількість сердець на екрані
   const heart = document.createElement("img");
   heart.src = "heart.PNG";
   heart.classList.add("heart");
+  hearts_list.push(heart);
 
-  const hx = Math.random() * (window.innerWidth - 50);
-  const hy = Math.random() * (window.innerHeight - 50);
+  const hx = Math.random() * (window.innerWidth - size);
+  const hy = Math.random() * (window.innerHeight - 200) + minY; 
 
   heart.style.left = hx + "px";
   heart.style.top = hy + "px";
 
   document.body.appendChild(heart);
 }
-setInterval(spawnHeart, 3500);
+setInterval(spawnHeart, time_heart); // кожні 3.5 секунди (3500 мс) з'являється нове серце
 
 // =======================
 // КОЛІЗІЯ
@@ -327,6 +394,9 @@ function checkCollision() {
 }
 
       heart.remove();
+      hearts_list.splice(hearts_list.indexOf(heart), 1); // видаляємо серце з масиву
+      
+
       collectObject();
     }
   });
