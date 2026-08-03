@@ -210,7 +210,7 @@ function collectObject() {
 async function updateStory() {
   if (isTyping || isFrozen) return;
 
-  if (score >= 100) return;
+  
 
   // КОЖНІ 20 ОЧОК → SOMETIMES
   if (score >= lastSometimes + 20) {
@@ -222,7 +222,7 @@ async function updateStory() {
 
   // КОЖНІ 30 ОЧОК → ПЕРЕГРУЗКА
   if (meaning_progress >= lastOverload + maxScore) { // scorre >= lastOverload + maxScore
-    lastOverload += maxScore;
+    
 
     runPhase2();
 
@@ -278,10 +278,10 @@ async function showPhaseText() {
 }
 
 function triggerOverloadPhase() {
+  if (isFrozen) return;
   isFrozen = true;
-
   playerImg.src = "tireddog.PNG";
-
+  if (scoreDrainInterval) clearInterval(scoreDrainInterval);
   scoreDrainInterval = setInterval(() => {
     if (score > 0) {
       score--;
@@ -291,6 +291,7 @@ function triggerOverloadPhase() {
 
   setTimeout(() => {
     clearInterval(scoreDrainInterval);
+    scoreDrainInterval = null;
     playerImg.src = normalImg;
     isFrozen = false;
   }, time_sleep);
@@ -298,10 +299,17 @@ function triggerOverloadPhase() {
 
 function clearProgressBar() {
 
+  if (progressDrainInterval) {
+    clearInterval(progressDrainInterval);
+  }
+
   progressDrainInterval = setInterval(() => {
     if (meaning_progress > 0) {
       meaning_progress--;
       updateProgressBar();
+    } else {
+      clearInterval(progressDrainInterval);
+      progressDrainInterval = null;
     }
   }, dell_time_progress);
 
@@ -338,8 +346,8 @@ function move() {
     x += speed;
   }
 
-  x = Math.max(13, Math.min(x, window.innerWidth - size));
-  y = Math.max(minY, Math.min(y, window.innerHeight - (size)));
+  x = Math.max(size / 2, Math.min(x, window.innerWidth - size / 2));
+  y = Math.max(minY, Math.min(y, window.innerHeight - size / 2));
 
   square.style.left = x + "px";
   square.style.top = y + "px";
@@ -434,3 +442,4 @@ document.addEventListener("click", () => {
 
 </body>
 </html>
+
